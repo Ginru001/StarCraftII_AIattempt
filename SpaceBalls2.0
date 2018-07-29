@@ -1,0 +1,72 @@
+#StarCraft II AI Bot Attempt
+#AI Class is Terran
+
+import sc2
+from sc2 import run_game, maps, Race, Difficulty
+from sc2.player import Bot, Computer
+from sc2.constants import COMMANDCENTER, SCV, SUPPLYDEPOT, REFINERY, BARRACKS 
+
+class Ultrarush(sc2.BotAI):
+    async def on_step(self, iteration):
+    #At each step do the following
+        await self.distribute_workers() #Distributes workers
+
+    #Build Workers
+    async def build_workers(self):
+        for cmdCenter in self.units(COMMANDCENTER).ready.noqueue:
+            if self.can_afford(SCV):
+                await self.do(cmdCenter.train(SCV))
+
+    #Builld Supplydepot
+    async def build_supplydepot(self):
+        if not self.supply_left<5 and not self.already_pending(SUPPLYDEPOT):
+            cmdCenter in self.units(COMMANDCENTER).ready
+            if cmdCenter.exists:
+                if self.can_afford(SUPPLYDEPOT):
+                    await self.build(SUPPLYDEPOT, near=cmdCenter.first)
+
+    #Build Barracks after first supplydepot
+    async def build_barracks(self):
+        if self.units(SUPPLYDEPOT).amount==1 and  self.already_pending(BARRACKS):
+            cmdCenter in self.units(COMMANDCENTER).ready
+            if cmdCenter.exists:
+                if self.can_afford(BARRACKS):
+                    await self.build(BARRACKS, near=cmdCenter.first)
+
+    #Build Solider
+    async def build_soldier(self):
+        if self.units(BARRACKS).amount==1:
+            for cmdCenter in self.units(BARRACKS).ready.noqueue:
+                if self.can_afford(SOLIDER):
+                    await self.do(cmdCenter.train(SCV))
+
+    #Build second commandcenter
+    async def expand(self):
+        if self.units(COMMANDCENTER).amount<2 and self.units(SUPPLYDEPOT).amount==1 and self.units(BARRACKS).amount==1 and self.can_afford(COMMANCENTER):
+            await self.expand_now()
+
+    #Build refinery if wihtin 25
+    async def build_refinery(self):
+        for cmdCenter in self.units(COMMANDCENTER).ready:
+            vespeneGas = self.state.vespene_gyser.closer_than(25.0, cmdCenter)
+            for vespene in vespeneGas:
+                if not self.can_afford(REFINERY):
+                    break
+                worker = self.select_build_worker(vespene.position)
+                if worker is None:
+                    break
+                if not self.units(REFINERY).closer_than(1.0, vespene).exists:
+                    await self.do(worker.build(REFINERY, vespene))
+
+
+
+    #async def on_step(self, iteration):
+       #At each step do the following
+        #await self.distribute_workers() #wait for self destribute
+        #await self.build_workers() #wait for workers to be built
+        #await self.build_supplydepot()#wait for supplydepot to be built.|
+
+#run the game
+run_game(maps.get("Abyssal Reef LE"), [
+        Bot(Race.Terran, Ultrarush()), Computer(Race.Protoss, Difficulty.Easy)
+], realtime=False)
